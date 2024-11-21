@@ -9,24 +9,20 @@ categories: jekyll update
 
 I made a Rubik's cube simulator in Python. I used matplotlib to display and animate the cube because I'm already familiar with matplotlib for plotting.
 
-# GUI
-
-Here is a screenshot of the simulator:
-
-![screenshot]({{ site.baseurl }}/images/rubiks_screenshot.png){: width="200"}
-
-I used the matplotlib GUI, calling `plt.figure()` and plt.show().
-A benefit is that I can click and drag to view the cube from different angles, even while animations are running, with no extra work on my part.
-The buttons in the bottom left corner turn the cube faces. They are labeled using standard Rubik's cube notation. F is the front face, R is right, U is up, B is back, L is left, and D is down. The default turn direction is clockwise, and prime (') represents a counter-clockwise turn, so clicking the R' button turns the right face counter-clockwise.
-
 Here is a demonstration video:
 <video width="320" height="240" controls loop="" muted="" autoplay="">
    <source src="https://github.com/bchellew15/bchellew15.github.io/raw/refs/heads/main/images/rubiks_screen_record_480.mp4">
 </video>
 
+# GUI
+
+I used the matplotlib GUI, calling `plt.figure()` and plt.show().
+A benefit is that I can click and drag to view the cube from different angles, even while animations are running, with no extra work on my part.
+The buttons in the bottom left corner turn the cube faces. They are labeled using standard Rubik's cube notation. F is the front face, R is right, U is up, B is back, L is left, and D is down. The default turn direction is clockwise, and prime (') represents a counter-clockwise turn, so clicking the R' button turns the right face counter-clockwise.
+
 (edit) All (these functions) assume that other face rotations are complete before they start. When a button is clicked, the (corresponding function) is added to a queue, so that any pending face rotations can be completed.
 
-The buttons in the top left corner are for high-level functions. The "reset" button just resets the colors. The "randomize" button executes 20 random moves to scramble the cube. 
+The buttons in the top left corner are for high-level functions. The "reset" button resets the colors. The "randomize" button executes 20 random moves to scramble the cube. 
 
 ![random]({{ site.baseurl }}/images/random_cube.png){: width="200"}
 
