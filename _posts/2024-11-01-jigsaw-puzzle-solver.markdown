@@ -114,7 +114,7 @@ Next I tried placing pieces based on the core rectangles found in the processing
 
 When placing a piece in a slot, its position could be determined based on the piece above the slot or the piece to the left of the slot. In theory both of these options would result in the same placement, but in practice the neighboring pieces are not perfectly placed and the corrections are not exact. I chose to calculate a position and rotation angle based on each of the neighboring pieces and take the average.
 
-Each piece is copied to its spot in the final image using the `copyTo` function. The piece outline contour is used to create a mask so that only the relevant pixels are copied .
+Each piece is copied to its spot in the final image using the `copyTo` function. The piece outline contour is used to create a mask so that only the relevant pixels are copied.
 
 Finally, any remaining gaps are filled using a median filter. Here is a completed puzzle:
 
