@@ -7,7 +7,7 @@ categories: jekyll update
 
 [The code for this project is [here][puzzle-code-repo], written in C++ and using OpenCV.]
 
-I wrote a program that solves jigsaw puzzles. The inputs are photos of the individual pieces, and the output is an image of the fully-assembled puzzle. I wanted it to work for a 100 piece puzzle off the shelf, with pictures taken by a smartphone in sub-optimal lighting conditions.
+I wrote a program to solve jigsaw puzzles. The inputs are photos of the individual pieces, and the output is an image of the fully-assembled puzzle. It is intended to work with pictures taken by a smartphone in sub-optimal lighting conditions.
 
 I made some assumptions about the puzzle. The border should be rectangular and the pieces should have standard shapes and be arranged in a grid-cut pattern. 
 
@@ -35,7 +35,7 @@ Identify what I will call the "core rectangle" of the piece by drawing a boundin
 
 This algorithm assumes that the puzzle piece is oriented correctly in the photo and that the tabs of the piece are not too wide or too tall.
 An algorithm that starts by locating the corners of the piece would be better in several ways. Photos could be taken with pieces rotated in any orientation, and pieces could be matched quickly and accurately by comparing the distance between corners and lining up the corners without trial and error.
-I have written a corner detection algorithm based on changes in the slope of a fit line, but it will take time to make it robust.
+I have written a corner detection algorithm based on changes in the slope of a fit line, but it is not yet robust.
 In the meantime, this algorithm was easy to implement and has worked well enough.
 
 ![bounding box]({{ site.baseurl }}/images/bounding_box.png){: width="200"}
@@ -51,15 +51,15 @@ Finally, each edge is categorized as a tab, a blank, or a flat edge.
 
 The foundation of the assembly algorithm is the `matchEdges` function, which takes two puzzle piece edges and outputs a score indicating how well they fit together. 
 
-There is some trial and error involved to make sure the pieces are properly aligned with each other. A `score` function is called multiple times with one of the pieces shifted different amounts in the x- and y-directions and rotated by different angles, then the best score is returned. If I implement a corner detection algorithm, as described above, trial and error will not be necessary.
+There is some trial and error involved to make sure the pieces are properly aligned with each other. A `score` function is called multiple times with one of the pieces shifted different amounts in the x- and y-directions and rotated by different angles, then the best score is returned. If I introduce a corner-detection algorithm, as described above, trial and error will not be necessary.
 
-Speed is critical because the `score` function is called so many times. There are ~N^2 edge comparisons, where N is the number of pieces, and the `score` function is called potentially hundreds of times for each edge comparison. The puzzle assembly currently runs in 1 second for a 16 piece puzzle, which corresponds to 40 seconds for a 100 piece puzzle or over an hour for a 1000 piece puzzle.
+Speed is critical because the `score` function is called many times. There are ~N^2 edge comparisons, where N is the number of pieces, and the `score` function may be called hundreds of times for each edge comparison. The puzzle assembly currently runs in 1 second for a 16 piece puzzle, which corresponds to 40 seconds for a 100 piece puzzle or over an hour for a 1000 piece puzzle.
 
 I initially tried to measure shape similarity using the Hausdorff distance. 
 The piece outline is stored as a set of points, and this involved iterating through each pair of points.
-The method was only somewhat effective, and it was slow -- O(N^2), where N is a large number of points.
+The method was only somewhat effective, and it was slow, with O(N^2) complexity where N is a large number of points.
 
-I decided to represent each edge as a binary raster image (using the `drawContour` function) and compare them with bitwise operations, which are fast. I also decreased the resolution of the images to make it faster.
+I decided to represent each edge as a binary raster image (using the `drawContour` function) and compare them with bitwise operations, which are fast. I also decreased the resolution of the images to make the comparisons faster.
 
 ![raster edge]({{ site.baseurl }}/images/raster_edge.png){: height="100"}
 
@@ -76,13 +76,13 @@ bitwise_and(edge1, edge2, and_matrix);
 return sum(nor_matrix)[0] + sum(and_matrix)[0];
 {% endhighlight %}
 
-The idea is to penalize overlap between pieces and penalize gaps between them. `and` is used to count the number of overlap pixels, while `nor` is used to count the number of gap pixels. Note that a lower score is better, and a perfect match with 0 overlap pixels and 0 gap pixels would get a score of 0.
+The idea is to penalize both overlap between pieces and gaps between them. `and` is used to count the number of overlap pixels, while `nor` is used to count the number of gap pixels. Note that a lower score is better, and a perfect match with 0 overlap pixels and 0 gap pixels would yield a score of 0.
 
 # Assembly
 
-To reduce errors and save time, pieces are only scored against each other in orientations where the connection is allowed. For example, a tab can be scored against a blank, but it cannot be scored against a tab or a flat edge. A connection is also not allowed if a flat edge would be adjacent to a tab or blank. On average, a piece has one allowed orientation in a given spot.
+Pieces are only scored against each other in orientations where the connection is allowed. For example, a tab can be scored against a blank, but it cannot be scored against a tab or a flat edge. A connection is also not allowed if a flat edge would be adjacent to a tab or blank. On average, a piece has one allowed orientation in a spot where two neighbors are already placed.
 
-As pieces are connected to the puzzle, pointers are added to a 2D `vector` of `PuzzlePiece` objects.
+A `Puzzle` object keeps track of the positions of pieces that have been added to the puzzle. As each piece is connected, a pointer is added to the appropriate location in a 2D `vector`.
 
 First, a corner is identified and assumed to be the top left corner. The user can rotate as needed after the puzzle is fully assembled.
 
@@ -106,19 +106,21 @@ The rest of the puzzle is filled in. For each slot, the remaining pieces are sco
 
 # Display
 
-Even after we know which pieces connect to which, it's not trivial to place each piece in the correct location in the completed puzzle image. My first approach was to place the pieces on an evenly spaced grid based on the size of the first piece. But the pieces can have different widths and heights, so this leaves many gaps and overlaps. The pieces might also need to be rotated a little, despite efforts to align them when taking the pictures.
+The final step is to construct the completed puzzle image. The information about which pieces  are connected must be translated into a set of coordinates for each piece. The pieces might also need to be rotated slightly, despite efforts to align them when taking the pictures.
 
-My next thought was to place pieces based on the core rectangles found in the processing step, lining up the centers of the core edges. This is an improvement, but there are still corrections that need to be made. These corrections can be calculated from the shift and rotation that resulted in the best score between the pieces. The rotation correction is added to the actual rotation applied to the neighboring pieces.
+I first tried placing the pieces on an evenly spaced grid based on the size of the first piece. But the pieces can have different widths and heights, so this leaves many gaps and overlaps. 
+
+Next I tried placing pieces based on the core rectangles found in the processing step, lining up the centers of the core edges. This is an improvement, but there are still corrections that need to be made. Those corrections can be calculated from the shift and rotation that resulted in the best score between the pieces. The rotation correction is added to the actual rotation applied to the neighboring pieces.
 
 When placing a piece in a slot, its position could be determined based on the piece above the slot or the piece to the left of the slot. In theory both of these options would result in the same placement, but in practice the neighboring pieces are not perfectly placed and the corrections are not exact. I chose to calculate a position and rotation angle based on each of the neighboring pieces and take the average.
 
-The piece outline contour is used to create a mask so that only the relevant pixels are copied using the `copyTo` function.
+Each piece is copied to its spot in the final image using the `copyTo` function. The piece outline contour is used to create a mask so that only the relevant pixels are copied .
 
-Finally, any remaining gaps are filled using a median filter. Here is the completed puzzle:
+Finally, any remaining gaps are filled using a median filter. Here is a completed puzzle:
 
 ![completed puzzle]({{ site.baseurl }}/images/fill_gaps.png)
 
-There is an option to superimpose the corresponding image number on each piece. If the pieces are numbered in advance - for example, by writing numbers on the back with a sharpie - this allows the user to easily assemble the physical puzzle.
+There is an option to superimpose the corresponding image number on each piece. If the pieces are numbered in advance - for example, by writing numbers on the back with a sharpie - the user can easily assemble the physical puzzle.
 
 ![fill gaps]({{ site.baseurl }}/images/numbers.png){: height="150"}
 
